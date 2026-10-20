@@ -1,2 +1,2 @@
-import React from 'react'; import ReactDOM from 'react-dom/client'; import { BrowserRouter } from 'react-router-dom'; import '@fontsource-variable/plus-jakarta-sans'; import App from './App'; import './index.css';
-ReactDOM.createRoot(document.getElementById('root')!).render(<BrowserRouter><App /></BrowserRouter>);
+import React from 'react'; import ReactDOM from 'react-dom/client'; import { BrowserRouter } from 'react-router-dom'; import '@fontsource-variable/plus-jakarta-sans'; import '@fontsource-variable/cairo'; import { LangProvider } from './i18n'; import App from './App'; import './index.css';
+ReactDOM.createRoot(document.getElementById('root')!).render(<LangProvider><BrowserRouter><App /></BrowserRouter></LangProvider>);
