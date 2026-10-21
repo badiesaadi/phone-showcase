@@ -1,14 +1,5 @@
-// Dev only: runs the same API as the Netlify function inside `vite`, storing data in ./.data, so `npm run dev` needs no second server.
-import fs from 'fs'; import path from 'path'; import { loadEnv } from 'vite'; import { handle } from '../netlify/functions/lib/core.mjs';
-const fileStore = dir => {
-  fs.mkdirSync(dir, { recursive: true }); const f = k => path.join(dir, k.replace(/[^\w.-]/g, '_'));
-  return {
-    get: async (k, o) => fs.existsSync(f(k)) ? (o?.type === 'json' ? JSON.parse(fs.readFileSync(f(k), 'utf8')) : fs.readFileSync(f(k))) : null,
-    setJSON: async (k, v) => fs.writeFileSync(f(k), JSON.stringify(v)),
-    set: async (k, v, o) => { fs.writeFileSync(f(k), Buffer.from(v)); fs.writeFileSync(f(k) + '.meta', JSON.stringify(o?.metadata || {})); },
-    getWithMetadata: async k => fs.existsSync(f(k)) ? { data: fs.readFileSync(f(k)), metadata: fs.existsSync(f(k) + '.meta') ? JSON.parse(fs.readFileSync(f(k) + '.meta', 'utf8')) : {} } : null
-  };
-};
+// Dev only: runs the same API inside `vite`, saving to ./.data, so `npm run dev` needs no second process.
+import { loadEnv } from 'vite'; import { handle } from '../server/core.mjs'; import { fileStore } from '../server/stores.mjs';
 export default function apiPlugin() {
   return {
     name: 'dev-api',

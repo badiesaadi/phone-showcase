@@ -1,4 +1,4 @@
-// REST API for the site and the admin: stateless; data lives in one JSON document, images in a blob store.
+// REST API used by server/index.mjs (and by the Vite dev server): stateless, data lives in one JSON document and images in a key-value store.
 // Security: HttpOnly + SameSite=Strict session cookie (7-day sliding), login rate limit, CSRF header, strict input validation, no secrets in responses.
 import jwt from 'jsonwebtoken'; import crypto from 'crypto'; import { makeSeed, PRICE_MIGRATION } from './seed.mjs';
 

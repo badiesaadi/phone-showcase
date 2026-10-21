@@ -1,14 +1,15 @@
 # Obsidian Studio: smartphone showcase + admin
 
-One React (Vite + TypeScript + Tailwind) project. The public site and the `/admin` panel are the React app; the API is a single Netlify Function that stores data and images in Netlify Blobs (no database to set up).
+One React (Vite + TypeScript + Tailwind) project. A small Node server (`server/index.mjs`) serves the built site, the `/admin` panel and the REST API from one process. Data and uploaded images go in Postgres when `DATABASE_URL` is set, otherwise in `.data/` (local only).
 
-## Deploy on Netlify
-1. Push this folder to GitHub, then Netlify > Add new site > Import from Git. Settings come from `netlify.toml`.
-2. Site configuration > Environment variables: add `JWT_SECRET` (16+ random characters), `ADMIN_EMAIL`, `ADMIN_PASSWORD` (8+ characters). Redeploy.
-3. Open `/admin/login`. The 6 sample phones are created on the first visit; edit or delete them in the admin.
+## Deploy on Render
+1. Push this folder to GitHub.
+2. Create a free Postgres database (Render's own free one expires after 30 days, so a free Neon or Supabase database is the better choice; check their current free limits). Copy its connection string (starts with `postgres://` or `postgresql://`).
+3. Render > New > **Blueprint** > pick the repo. Render reads `render.yaml` and asks for `ADMIN_EMAIL`, `ADMIN_PASSWORD` and `DATABASE_URL`; `JWT_SECRET` is generated for you.
+   (Or New > Web Service with build command `npm install --include=dev && npm run build`, start command `npm start`, and add the 4 env vars by hand.)
+4. Open `https://YOUR-SERVICE.onrender.com/admin/login`. The 6 sample phones are created on the first visit.
 
-CLI instead of Git: `npm i -g netlify-cli && netlify login && netlify init && netlify deploy --build --prod`.
-(Drag-and-drop of `dist` alone will not work: the API needs the function.)
+Free web services sleep after 15 minutes without traffic and take about a minute to wake up. Without `DATABASE_URL`, everything you add is lost on every restart.
 
 ## Adding a phone (admin)
 Open `/admin/login`, then **+ New phone**. Only these are needed: brand (pick one or choose "+ New brand…"), phone name, and optionally price in DA, a brief description and a main image. Tick "Published" to show it on the site. Everything else (colors, specs, camera photos, buy links) sits under **More details (optional)** and can be skipped. Prices are shown in Algerian dinar (e.g. 250 000 DA); phones without a price show "Price on request". The sample phones and their prices are examples: edit or delete them in the admin.
@@ -26,14 +27,15 @@ The whole interface is available in English, French and Arabic (right-to-left). 
 ## Run locally
 ```bash
 npm install
-npm run dev        # http://localhost:5173  ·  admin: /admin  ·  login admin@example.com / admin12345
+npm run dev        # http://localhost:5173 · admin: /admin · login admin@example.com / admin12345
 ```
-Locally the same API runs inside Vite and saves to `.data/`. Optional: copy `.env.example` to `.env` to change the login. Local data does not carry over to the live site.
+Locally the API runs inside Vite and saves to `.data/`. To test the production server: `npm run build && npm start` (http://localhost:4000; set the env vars in `.env`, see `.env.example`).
 
 ## Structure
 - `src/` React app (`pages.tsx` public, `admin.tsx` admin, `i18n.tsx` EN/FR/AR texts, `api.ts` fetch helper with in-browser image resize)
-- `netlify/functions/api.mjs` + `lib/core.mjs` the REST API (`/api/*`, `/uploads/*`); `lib/seed.mjs` sample data
-- `dev/api-plugin.mjs` runs that API in `npm run dev`
+- `server/index.mjs` production server (static files + API) · `server/core.mjs` the REST API · `server/stores.mjs` file / Postgres storage · `server/seed.mjs` sample data
+- `dev/api-plugin.mjs` runs the API inside `npm run dev`
+- `render.yaml` Render blueprint
 
 ## API
 Public: `GET /api/brands` · `GET /api/phones?q=&brand=&min=&max=&sort=newest|price_asc|price_desc|battery|camera&page=&limit=&featured=1` · `GET /api/phones/:slug` · `GET /api/compare?a=&b=`
