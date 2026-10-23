@@ -19,4 +19,4 @@ export async function api(p: string, o: any = {}) {
 }
 export const login = async (email: string, password: string) => { await api('/auth/login', { method: 'POST', body: { email, password } }); try { localStorage.setItem(HINT, '1'); } catch {} };
 export const logout = async () => { try { await api('/auth/logout', { method: 'POST' }); } catch {} try { localStorage.removeItem(HINT); } catch {} };
-export const useGet = (p: string) => { const [d, s] = useState<any>(null); useEffect(() => { let on = true; s(null); api(p).then(x => on && s(x)).catch(e => on && s({ error: e.message })); return () => { on = false; }; }, [p]); return d; };
+export const useGet = (p: string, keep = false) => { const [d, s] = useState<any>(null); useEffect(() => { let on = true; if (!keep) s(null); api(p).then(x => on && s(x)).catch(e => on && s({ error: e.message })); return () => { on = false; }; }, [p]); return d; };

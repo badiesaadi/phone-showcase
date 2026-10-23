@@ -1,25 +1,46 @@
-import { useEffect, useState } from 'react'; import { Link, useParams } from 'react-router-dom';  import { useGet } from './api'; import { Reveal, Visual } from './ui'; import { num, useI18n } from './i18n';
+import { useEffect, useState } from 'react'; import { Link, useParams } from 'react-router-dom';  import { useGet } from './api'; import { PhoneMock, Reveal, Visual } from './ui'; import { num, useI18n } from './i18n';
 const accent = (p: any) => p?.brand?.accent || '#94a3b8';
 export function Home() {
-  const { t, lang } = useI18n();
-  const [q, setQ] = useState(''), [dq, setDq] = useState(''), [b, setB] = useState(''), [s, setS] = useState('newest'), brands = useGet('/brands'), feat = useGet('/phones?featured=1&limit=1'), d = useGet(`/phones?q=${encodeURIComponent(dq)}&brand=${b}&sort=${s}&limit=24`);
-  useEffect(() => { const t = setTimeout(() => setDq(q), 250); return () => clearTimeout(t); }, [q]); // wait for typing to pause before searching
+  const { t, lang, phones } = useI18n();
+  const BUDGETS: [string, number, number][] = [['bud.all', 0, 0], ['bud.u50', 0, 50000], ['bud.50_100', 50000, 100000], ['bud.100_200', 100000, 200000], ['bud.o200', 200000, 0]];
+  const [q, setQ] = useState(''), [dq, setDq] = useState(''), [b, setB] = useState(''), [s, setS] = useState('newest'), [bud, setBud] = useState(0), [lim, setLim] = useState(24), brands = useGet('/brands'), feat = useGet('/phones?featured=1&limit=1'),
+    d = useGet(`/phones?q=${encodeURIComponent(dq)}&brand=${b}&sort=${s}&limit=${lim}&min=${BUDGETS[bud][1] || ''}&max=${BUDGETS[bud][2] || ''}`, true);
+  useEffect(() => { const t = setTimeout(() => { setDq(q); setLim(24); }, 250); return () => clearTimeout(t); }, [q]); // wait for typing to pause before searching
   const hero = feat?.items?.[0]; useEffect(() => { document.title = t('home.doc'); document.body.style.setProperty('--a', accent(hero)); }, [hero, lang]);
+  const list = Array.isArray(brands) ? brands : [], total = list.reduce((n: number, x: any) => n + x.count, 0), nb = list.filter((x: any) => x.count > 0).length;
+  const chip = (on: boolean, c?: string) => on ? { background: c || '#e2e8f0', color: '#020617' } : {};
   return <div>
     <section className="grid md:grid-cols-2 items-center gap-6 pt-6"><div><h1 className="text-[clamp(2.4rem,8vw,5rem)] font-extrabold tracking-tighter leading-[.95]">{t('home.h1a')}<br /><span style={{ color: accent(hero) }}>{t('home.h1b')}</span></h1>
-      <p className="mt-4 text-slate-400 max-w-md">{t('home.sub')}</p>{hero && <Link to={'/phones/' + hero.slug} className="btn inline-block mt-6" style={{ background: accent(hero), color: '#020617' }}>{t('home.explore', { name: hero.name })}</Link>}</div>
-      <div className="h-[420px] glass rounded-[2rem] overflow-hidden">{hero ? <Visual p={hero} color={hero.colors[0]?.hex} img={hero.colors[0]?.image} /> : <div className="sk h-full" />}</div></section>
+      <p className="mt-4 text-slate-400 max-w-md">{t('home.sub')}</p>{hero && <Link to={'/phones/' + hero.slug} className="btn inline-block mt-6" style={{ background: accent(hero), color: '#020617' }}>{t('home.explore', { name: hero.name })}</Link>}
+      {total > 0 && <p className="mt-5 text-sm text-slate-400">{t('home.stats', { n: total, b: nb })}</p>}</div>
+      <div className="h-[320px] md:h-[420px] glass rounded-[2rem] overflow-hidden">{hero ? <Visual p={hero} color={hero.colors[0]?.hex} img={hero.colors[0]?.image} /> : <div className="sk h-full" />}</div></section>
     <div className="mt-10 flex flex-wrap gap-3"><input className="inp !w-56" placeholder={t('home.search')} value={q} onChange={e => setQ(e.target.value)} />
-      <select className="inp !w-40" value={s} onChange={e => setS(e.target.value)}>{['newest', 'price_asc', 'price_desc', 'battery', 'camera'].map(v => <option key={v} value={v}>{t('sort.' + v)}</option>)}</select></div>
-    <div className="mt-4 flex gap-2 overflow-x-auto">{[{ slug: '', name: t('home.all') }, ...(Array.isArray(brands) ? brands : [])].map((x: any) => <button key={x.slug} onClick={() => setB(x.slug)} className="btn shrink-0" style={b === x.slug ? { background: x.accent || '#e2e8f0', color: '#020617' } : {}}>{x.name}</button>)}</div>
-    <div className="mt-6 grid sm:grid-cols-2 lg:grid-cols-3 gap-4">{!d ? Array(6).fill(0).map((_, i) => <div key={i} className="sk h-60 rounded-3xl" />) : d.items?.length ? d.items.map((p: any) =>
-      <Card key={p.id} p={p} />) : <p className="text-slate-400">{t('home.none')}</p>}</div></div>;
+      <select className="inp !w-40" value={s} onChange={e => { setS(e.target.value); setLim(24); }}>{['newest', 'price_asc', 'price_desc', 'battery', 'camera'].map(v => <option key={v} value={v}>{t('sort.' + v)}</option>)}</select></div>
+    <div className="mt-4 flex gap-2 overflow-x-auto noscroll pb-1">{[{ slug: '', name: t('home.all') }, ...list].map((x: any) => <button key={x.slug} onClick={() => { setB(x.slug); setLim(24); }} className="btn shrink-0" style={chip(b === x.slug, x.accent)}>{x.name}</button>)}</div>
+    <div className="mt-2 flex gap-2 overflow-x-auto noscroll pb-1">{BUDGETS.map(([k], i) => <button key={k} onClick={() => { setBud(i); setLim(24); }} className="btn shrink-0 !text-xs" style={chip(bud === i)}>{t(k)}</button>)}</div>
+    {d?.total > 0 && <p className="mt-4 text-sm text-slate-500">{phones(d.total)}</p>}
+    <div className="mt-3 grid sm:grid-cols-2 lg:grid-cols-3 gap-4">{!d ? Array(6).fill(0).map((_, i) => <div key={i} className="sk h-64 rounded-3xl" />) : d.items?.length ? d.items.map((p: any) =>
+      <Card key={p.id} p={p} />) : <p className="text-slate-400">{t('home.none')}</p>}</div>
+    {d?.items && d.total > d.items.length && <button className="btn block mx-auto mt-8" onClick={() => setLim(lim + 24)}>{t('home.more', { n: d.total - d.items.length })}</button>}</div>;
 }
-export const Card = ({ p }: any) => { const { t, da } = useI18n(), money = (n: number) => da(n) || t('price.ask'); return (<Reveal><Link to={'/phones/' + p.slug} className="glass lift rounded-3xl p-5 block h-60 relative overflow-hidden" style={{ boxShadow: `0 30px 80px -45px ${accent(p)}` }}>
-        <div className="absolute -end-8 -top-8 w-40 h-40 rounded-full blur-3xl opacity-40" style={{ background: accent(p) }} />{p.main_image && <img src={p.main_image} alt={p.name} loading="lazy" className="absolute end-3 top-3 h-32 object-contain" />}
-        <p className="text-xs font-semibold" style={{ color: accent(p) }}>{p.brand.name}</p><h3 dir="auto" className="text-2xl font-extrabold tracking-tighter w-3/5 leading-tight">{p.name}</h3><p dir="auto" className="mt-2 text-sm text-slate-400 w-3/5 line-clamp-3">{p.tagline || p.description}</p>
-        <div className="absolute start-5 bottom-5 flex gap-2">{p.specs.chipset && <span dir="auto" className="badge">{p.specs.chipset}</span>}<span className="badge">{money(p.price)}</span></div></Link></Reveal>); };
+export const Card = ({ p }: any) => {
+  const { t, da } = useI18n(), sp = p.specs || {}, ac = accent(p), line = [sp.displaySize && sp.displaySize + '"', sp.ram, sp.battery && num(sp.battery) + ' mAh', sp.mainMp && sp.mainMp + ' MP'].filter(Boolean).map((x: string) => String(x).replace(/ /g, '\u00a0')).join(' · ');
+  return (<Reveal><Link to={'/phones/' + p.slug} className="glass lift rounded-3xl block h-64 relative overflow-hidden" style={{ boxShadow: `0 30px 80px -45px ${ac}` }}>
+    <div className="absolute -end-10 top-4 w-48 h-48 rounded-full blur-3xl opacity-40" style={{ background: ac }} />
+    <div className="absolute inset-y-2 end-0 w-[48%] pointer-events-none">{p.main_image ? <img src={p.main_image} alt={p.name} loading="lazy" className="w-full h-full object-contain p-3" /> : <PhoneMock color={p.colors?.[0]?.hex} accent={ac} name={p.name} brand={p.brand?.slug} />}</div>
+    <div className="relative h-full p-5 flex flex-col w-[56%]"><p className="text-xs font-semibold" style={{ color: ac }}>{p.brand.name}</p><h3 dir="auto" className="text-xl font-extrabold tracking-tighter leading-tight">{p.name}</h3>
+      <p dir="auto" className="mt-1.5 text-[13px] text-slate-400 line-clamp-2">{p.tagline || p.description}</p>
+      <div className="mt-auto">{line && <p dir="ltr" className="text-[11px] text-slate-400 mb-1.5 leading-snug">{line}</p>}<p className="text-lg font-extrabold tracking-tight">{da(p.price) || <span className="text-sm font-semibold text-slate-400">{t('price.ask')}</span>}</p></div></div></Link></Reveal>);
+};
 const H2 = 'text-3xl font-extrabold tracking-tighter';
+const UNIT: Record<string, string> = { displaySize: '"', refresh: ' Hz', nits: ' nits', battery: ' mAh', wired: ' W', wireless: ' W', mainMp: ' MP', uwMp: ' MP', teleMp: ' MP', frontMp: ' MP', weight: ' g' };
+const SPEC_ORDER = ['displaySize', 'displayType', 'refresh', 'nits', 'chipset', 'ram', 'storage', 'battery', 'wired', 'wireless', 'mainMp', 'uwMp', 'teleMp', 'frontMp', 'weight', 'os', 'ip', 'frame', 'back', 'connectivity'];
+function Specs({ p }: any) {
+  const { t } = useI18n(), rows = SPEC_ORDER.filter(k => p.specs[k]);
+  if (rows.length < 4) return null;
+  return <section className="mt-14"><Reveal as="h2" className={H2}>{t('sec.specs')}</Reveal><Reveal className="mt-4 glass rounded-[2rem] p-2 grid sm:grid-cols-2">{rows.map(k => { const v = p.specs[k], numeric = k in UNIT && /^[\d.]+$/.test(String(v));
+    return <div key={k} className="flex justify-between gap-4 px-4 py-3 border-b border-white/5"><span className="text-sm text-slate-400">{k === 'nits' ? t('row.nits') : t('sp.' + k).replace(/\s*\(.*\)$/, '')}</span><b dir={numeric ? 'ltr' : 'auto'} className="text-sm text-end">{numeric ? num(v) + UNIT[k] : v}</b></div>; })}</Reveal></section>;
+}
 const LENS = ['Ultrawide', 'Wide', 'Telephoto', 'Night'];
 function Samples({ p, a }: any) {
   const { t: tt } = useI18n();
@@ -63,7 +84,7 @@ export function PhonePage() {
       <div className="mt-6 glass rounded-3xl p-5 space-y-4">{rows.filter(r => r[1]).map(([k, v, u, m]) => <div key={k}><div className="flex justify-between text-sm"><span className="text-slate-400">{t('row.' + k)}</span><b dir="ltr">{num(v)}{u}</b></div><Bar v={v} max={m} c={a} /></div>)}</div>
       {!!p.highlights.length && <ul className="mt-5 text-sm text-slate-300 list-disc ps-5 space-y-1">{p.highlights.map((h: string) => <li key={h} dir="auto">{h}</li>)}</ul>}
       <div className="mt-6 flex flex-wrap gap-2">{p.links.map((l: any) => <a key={l.id} href={l.url} target="_blank" rel="noopener" dir="auto" className="btn" style={{ background: a, color: '#020617' }}>{l.store}</a>)}</div></div></div>
-    <Samples p={p} a={a} /><Highlights p={p} a={a} /></div>;
+    <Specs p={p} /><Samples p={p} a={a} /><Highlights p={p} a={a} /></div>;
 }
 const CM: [string, string, string, number][] = [['cmp.price', 'price', ' DA', -1], ['cmp.benchmark', 'benchmark', '', 1], ['cmp.battery', 'battery', ' mAh', 1], ['cmp.wired', 'wired', ' W', 1], ['cmp.mainMp', 'mainMp', ' MP', 1], ['cmp.nits', 'nits', ' nits', 1], ['cmp.weight', 'weight', ' g', -1]];
 export function Compare() {

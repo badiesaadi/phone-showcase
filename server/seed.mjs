@@ -1,5 +1,6 @@
+import { CATALOG, CATALOG_BRANDS, FEATURED, OFFICIAL } from './catalog.mjs';
 // Sample data written once, the first time the API runs with an empty store. Edit everything in /admin afterwards.
-const slug = s => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+const slug = s => s.toLowerCase().replace(/\+/g, ' plus ').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''); // "S25+" -> s25-plus, so it differs from "S25"
 const B = [['Apple', '#cbd5e1'], ['Samsung', '#8b5cf6'], ['Google Pixel', '#34d399'], ['Xiaomi', '#fb923c'], ['OnePlus', '#ef4444'], ['Asus ROG', '#ff2e63']];
 const P = [
  ['Apple', 'iPhone 16 Pro Max', 'Titanium craft and pro-grade cameras.', 289000, { displaySize: 6.9, displayType: 'OLED', refresh: 120, nits: 2000, chipset: 'A18 Pro', benchmark: 8400, battery: 4685, wired: 33, mainMp: 48, uwMp: 48, teleMp: 12, frontMp: 12, weight: 227, os: 'iOS 18', ip: 'IP68', frame: 'Titanium', back: 'Glass' }, [['Desert Titanium', '#b8a089'], ['Natural Titanium', '#8b8680'], ['Black Titanium', '#2b2d31']], 'https://www.apple.com/iphone/'],
@@ -19,8 +20,25 @@ export function makeSeed() {
     status: 'published', featured: name.startsWith('iPhone'), main_image: '', model_url: '', specs,
     highlights: [specs.chipset, specs.displaySize + '" ' + specs.displayType, specs.refresh + 'Hz'],
     // created_at staggered so "newest" has a stable order
-    created_at: new Date(Date.parse(now) - (P.length - i) * 1000).toISOString(), updated_at: now,
+    created_at: new Date(Date.parse(now) - 120000 - (P.length - i) * 1000).toISOString(), updated_at: now,
     colors: cols.map(([n, hex]) => ({ id: ++seq.color, name: n, hex, image: '' })), images: [], links: [{ id: ++seq.link, store: 'Official store', url }]
   }));
-  return { v: 2, brands, phones, seq };
+  const d = { v: 3, brands, phones, seq }; addCatalog(d); return d;
+}
+
+// Adds the sample catalogue (and its brands) to a data document. Phones whose slug already exists are skipped.
+export function addCatalog(d) {
+  const now = Date.now(), have = new Set(d.phones.map(p => p.slug));
+  for (const [name, accent] of CATALOG_BRANDS) if (!d.brands.some(b => b.slug === slug(name))) d.brands.push({ id: ++d.seq.brand, name, slug: slug(name), logo: '', accent, sort: d.brands.length });
+  const list = [...CATALOG].sort((a, b) => a[3] - b[3]); // cheapest first, so the most expensive flagships are the newest
+  list.forEach(([b, name, tag, price, specs, cols], i) => {
+    if (have.has(slug(name))) return; have.add(slug(name)); const brand = d.brands.find(x => x.name === b); if (!brand) return;
+    d.phones.push({
+      id: ++d.seq.phone, brand_id: brand.id, name, slug: slug(name), tagline: tag, description: tag, release_date: '', price, status: 'published', featured: FEATURED.includes(name), main_image: '', model_url: '', specs,
+      highlights: [specs.chipset, specs.displaySize && specs.displaySize + '" ' + specs.displayType + (specs.refresh ? ' ' + specs.refresh + 'Hz' : ''), specs.battery && specs.battery + ' mAh' + (specs.wired ? ' · ' + specs.wired + 'W' : ''), specs.mainMp && specs.mainMp + ' MP camera'].filter(Boolean),
+      created_at: new Date(now - (list.length - i) * 400).toISOString(), updated_at: new Date(now).toISOString(),
+      colors: cols.map(([n, hex]) => ({ id: ++d.seq.color, name: n, hex, image: '' })), images: [], links: [{ id: ++d.seq.link, store: 'Official store', url: OFFICIAL[b] }]
+    });
+  });
+  return d;
 }

@@ -8,13 +8,13 @@ const Skel = () => <div className="sk h-96 rounded-3xl mt-6" />;
 
 function LangSwitch() {
   const { t, lang, setLang } = useI18n();
-  return <div role="group" aria-label={t('lang.label')} className="glass rounded-full p-0.5 flex">{LANGS.map(([l, n]) => <button key={l} aria-pressed={lang === l} onClick={() => setLang(l)} className={'px-2.5 py-1.5 rounded-full text-xs font-semibold active:scale-95 transition ' + (lang === l ? 'bg-white/15' : 'text-slate-400')}>{n}</button>)}</div>;
+  return <div role="group" aria-label={t('lang.label')} className="glass rounded-full p-0.5 flex">{LANGS.map(([l, n]) => <button key={l} aria-pressed={lang === l} onClick={() => setLang(l)} className={'px-2 sm:px-2.5 py-1.5 rounded-full text-[11px] sm:text-xs font-semibold active:scale-95 transition ' + (lang === l ? 'bg-white/15' : 'text-slate-400')}>{n}</button>)}</div>;
 }
 function SoundBtn() {
   const { t } = useI18n(), [snd, setSnd] = useState(soundOn());
   return <button className="btn" aria-label={snd ? t('sound.on') : t('sound.off')} onClick={() => { setSound(!snd); setSnd(!snd); }}><span className="sm:hidden">{snd ? '🔊' : '🔇'}</span><span className="hidden sm:inline">{snd ? t('sound.on') : t('sound.off')}</span></button>;
 }
-const Logo = ({ to, children }: { to: string; children?: ReactNode }) => <Link to={to} className="font-extrabold tracking-tighter text-xl">OBSIDIAN<span style={{ color: 'var(--a,#94a3b8)' }}>.</span>STUDIO{children}</Link>;
+const Logo = ({ to, children }: { to: string; children?: ReactNode }) => <Link to={to} className="font-extrabold tracking-tighter text-[15px] sm:text-xl">OBSIDIAN<span style={{ color: 'var(--a,#94a3b8)' }}>.</span>STUDIO{children}</Link>;
 
 // Background effects shared by every layout (progress bar, cursor glow, dot grid)
 function Backdrop({ children }: { children: ReactNode }) {

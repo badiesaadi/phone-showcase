@@ -11,6 +11,9 @@ One React (Vite + TypeScript + Tailwind) project. A small Node server (`server/i
 
 Free web services sleep after 15 minutes without traffic and take about a minute to wake up. Without `DATABASE_URL`, everything you add is lost on every restart.
 
+## Sample catalogue
+A fresh install (and the first request after upgrading an older site) fills the shop with about 70 phones from 15 brands (Apple, Samsung, Xiaomi, Oppo, Realme, Honor, Huawei, Vivo, Infinix, Tecno, Google Pixel, OnePlus, Nothing, Motorola, Asus ROG), each with colours, specs and an official-store link. **Specs are indicative and prices are placeholder dinar amounts: check each phone in the admin before showing it to customers**, and delete the ones you do not sell. Deleted phones do not come back. Phones without a photo get a drawn back-and-front illustration in the chosen colour; upload a real photo as the main image in the admin to replace it. Tip: a buy link can be a WhatsApp link such as `https://wa.me/213XXXXXXXXX`, which gives customers a one-tap "order" button.
+
 ## Adding a phone (admin)
 Open `/admin/login`, then **+ New phone**. Only these are needed: brand (pick one or choose "+ New brand…"), phone name, and optionally price in DA, a brief description and a main image. Tick "Published" to show it on the site. Everything else (colors, specs, camera photos, buy links) sits under **More details (optional)** and can be skipped. Prices are shown in Algerian dinar (e.g. 250 000 DA); phones without a price show "Price on request". The sample phones and their prices are examples: edit or delete them in the admin.
 
@@ -33,7 +36,7 @@ Locally the API runs inside Vite and saves to `.data/`. To test the production s
 
 ## Structure
 - `src/` React app (`pages.tsx` public, `admin.tsx` admin, `i18n.tsx` EN/FR/AR texts, `api.ts` fetch helper with in-browser image resize)
-- `server/index.mjs` production server (static files + API) · `server/core.mjs` the REST API · `server/stores.mjs` file / Postgres storage · `server/seed.mjs` sample data
+- `server/index.mjs` production server (static files + API) · `server/core.mjs` the REST API · `server/stores.mjs` file / Postgres storage · `server/seed.mjs` + `server/catalog.mjs` sample data
 - `dev/api-plugin.mjs` runs the API inside `npm run dev`
 - `render.yaml` Render blueprint
 

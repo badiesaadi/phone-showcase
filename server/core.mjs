@@ -1,8 +1,8 @@
 // REST API used by server/index.mjs (and by the Vite dev server): stateless, data lives in one JSON document and images in a key-value store.
 // Security: HttpOnly + SameSite=Strict session cookie (7-day sliding), login rate limit, CSRF header, strict input validation, no secrets in responses.
-import jwt from 'jsonwebtoken'; import crypto from 'crypto'; import { makeSeed, PRICE_MIGRATION } from './seed.mjs';
+import jwt from 'jsonwebtoken'; import crypto from 'crypto'; import { makeSeed, addCatalog, PRICE_MIGRATION } from './seed.mjs';
 
-const slugify = s => String(s).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+const slugify = s => String(s).toLowerCase().replace(/\+/g, ' plus ').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 const SEC = { 'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'same-origin' };
 const json = (d, status = 200, headers = {}) => new Response(JSON.stringify(d), { status, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', ...SEC, ...headers } });
 const err = (status, error, headers) => json({ error }, status, headers);
@@ -48,7 +48,10 @@ async function addFailure(db, id) { const r = await db.get(rlKey(id), { type: 'j
 async function load(store) {
   const d = await store.get(KEY, { type: 'json' });
   if (!d) { const s = makeSeed(); await store.setJSON(KEY, s); return s; }
-  if (d.v !== 2) { for (const p of d.phones) { const m = PRICE_MIGRATION[p.slug]; if (m && p.price === m[0]) p.price = m[1]; } d.v = 2; await store.setJSON(KEY, d); }
+  if ((d.v || 0) < 3) { // one-time upgrades of older data
+    if (!d.v) for (const p of d.phones) { const m = PRICE_MIGRATION[p.slug]; if (m && p.price === m[0]) p.price = m[1]; } // v1 sample prices were in US dollars
+    addCatalog(d); d.v = 3; await store.setJSON(KEY, d); // v3: the large sample catalogue
+  }
   return d;
 }
 const hyd = (d, p) => p && ({ ...p, featured: !!p.featured, brand: d.brands.find(b => b.id === p.brand_id) || null, colors: p.colors.map(c => ({ ...c, phone_id: p.id })), images: [...p.images].sort((a, b) => a.sort - b.sort).map(i => ({ ...i, phone_id: p.id })), links: p.links.map(l => ({ ...l, phone_id: p.id })) });
@@ -61,6 +64,7 @@ function list(d, q, admin) {
   let r = d.phones.filter(p => (admin || p.status === 'published') && d.brands.some(b => b.id === p.brand_id));
   if (s) r = r.filter(p => (p.name || '').toLowerCase().includes(s) || (p.tagline || '').toLowerCase().includes(s));
   if (q.brand) r = r.filter(p => d.brands.find(b => b.id === p.brand_id)?.slug === q.brand);
+  if (q.min || q.max) r = r.filter(p => p.price > 0); // a budget filter leaves out phones without a price
   if (q.min) r = r.filter(p => p.price >= +q.min); if (q.max) r = r.filter(p => p.price <= +q.max);
   if (q.featured) r = r.filter(p => p.featured);
   r = [...r].sort(ORDER[q.sort] || ORDER.newest);
